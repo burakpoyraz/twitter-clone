@@ -1,3 +1,4 @@
+import { generateTokenandSetCookie } from "../lib/utils/generateToken.js";
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 
@@ -7,19 +8,19 @@ export const signup = async (req, res) => {
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      res.status(400).json({ error: "Invalid Email format" });
+      return res.status(400).json({ error: "Invalid Email format" });
     }
     const existingUser = await User.findOne({ username });
     if (existingUser) {
-      res.status(400).json({ error: "Username already exists" });
+     return res.status(400).json({ error: "Username already exists" });
     }
     const existingMail = await User.findOne({ email });
     if (existingMail) {
-      res.status(400).json({ error: "Email already exists" });
+     return res.status(400).json({ error: "Email already exists" });
     }
 
     //hashing password
-    const salt = bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const newUser = new User({
@@ -38,6 +39,7 @@ export const signup = async (req, res) => {
           _id: newUser._id,
           username: newUser.username,
           email: newUser.email,
+          password: newUser.password,
           fullname: newUser.fullname,
           followers: newUser.followers,
           following: newUser.following,
@@ -51,7 +53,7 @@ export const signup = async (req, res) => {
     }
   } catch (err) {
     console.log("Error in signup", err.message);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: "Internal Server Error"+err.message });
   }
 };
 
