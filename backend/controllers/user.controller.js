@@ -8,7 +8,7 @@ export const getUserProfile = async (req, res) => {
   try {
     const user = await User.findOne({
       username,
-    });
+    }).populate("followers following", "username profileImg");
     if (!user) {
       return res.status(404).json({
         error: "User not found",
@@ -43,7 +43,7 @@ export const followUnfollowUser = async (req, res) => {
     if (isFollowing) {
       await User.findByIdAndUpdate(id, {
         $pull: { followers: currentUser._id },
-      });
+      })
       await User.findByIdAndUpdate(currentUser._id, {
         $pull: { following: id },
       });
