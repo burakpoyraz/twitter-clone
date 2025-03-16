@@ -58,7 +58,10 @@ export const login = async (req, res) => {
   try {
     const { username, password } = req.body;
     const user = await User.findOne({ username });
-    const isPasswordCorrect = await bcrypt.compare(password, user.password || "");
+    const isPasswordCorrect = await bcrypt.compare(
+      password,
+      user.password || ""
+    );
 
     if (!user || !isPasswordCorrect) {
       return res.status(400).json({ error: "Invalid username or password" });
@@ -84,29 +87,31 @@ export const login = async (req, res) => {
 };
 
 export const logout = (req, res) => {
-
-  try
-  {
+  try {
     res.clearCookie("jwt");
     res.status(200).json({ message: "Logged out successfully" });
-  }
-  catch(err)
-  {
+  } catch (err) {
     console.log("Error in logout", err.message);
     res.status(500).json({ error: "Internal Server Error" + err.message });
   }
 };
 
-
 export const getMe = async (req, res) => {
-  try{
-  
-    res.status(200).json(req.user);
-
-  }
-  catch(err)
-  {
+  try {
+    res.status(200).json({
+      _id: req.user._id,
+      username: req.user.username,
+      email: req.user.email,
+      fullname: req.user.fullname,
+      followers: req.user.followers,
+      following: req.user.following,
+      profileImg: req.user.profileImg,
+      coverImg: req.user.coverImg,
+      bio: req.user.bio,
+      link: req.user.link,
+    });
+  } catch (err) {
     console.log("Error in getMe", err.message);
     res.status(500).json({ error: "Internal Server Error" + err.message });
   }
-}
+};
