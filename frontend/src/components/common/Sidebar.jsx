@@ -42,11 +42,9 @@ const Sidebar = () => {
     },
   });
 
-  const { data: authUser } = useQuery({
-    queryKey: ["authUser"],
-  });
+  const authUser = queryClient.getQueryData(["authUser"]);
 
-  console.log("authUser", authUser);
+
 
   const data = {
     fullName: authUser?.fullname,
