@@ -84,7 +84,9 @@ export const commentOnPost = async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const post = await Post.findById(id);
+    const post = await Post.findById(id)
+      .populate("user", "-password")
+      .populate("comments.user", "username fullname");
     if (!post) {
       return res.status(404).json({ error: "Post not found" });
     }
@@ -155,7 +157,7 @@ export const getAllPosts = async (req, res) => {
     const posts = await Post.find()
       .sort({ createdAt: -1 })
       .populate("user", "-password")
-      .populate("comments.user", "username")
+      .populate("comments.user", "username fullname")
       .populate("likes", "username email");
 
     res.status(200).json(posts);
@@ -176,9 +178,8 @@ export const getLikedPosts = async (req, res) => {
     const posts = await Post.find({ likes: userId })
       .sort({ createdAt: -1 })
       .populate("user", "-password")
-      .populate("comments.user", "username")
-      .populate("likes", "username")
-      
+      .populate("comments.user", "username fullname")
+      .populate("likes", "username");
 
     res.status(200).json(posts);
   } catch (err) {
@@ -190,9 +191,7 @@ export const getLikedPosts = async (req, res) => {
 export const getFollowingPosts = async (req, res) => {
   try {
     const userId = req.user._id.toString();
-    const user = await User
-      .findById(userId)
-      .populate("following", "_id");
+    const user = await User.findById(userId).populate("following", "_id");
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -205,19 +204,16 @@ export const getFollowingPosts = async (req, res) => {
       .populate("likes", "username");
 
     res.status(200).json(posts);
-  }
-  catch (err) {
+  } catch (err) {
     console.log("Error in getFollowingPosts", err);
     res.status(500).json({ error: "Internal Server Error" });
   }
-}
+};
 
 export const getUserPosts = async (req, res) => {
   try {
     const { username } = req.params;
-    const user = await User
-      .findOne({ username })
-      .populate("following", "_id");
+    const user = await User.findOne({ username }).populate("following", "_id");
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -230,10 +226,8 @@ export const getUserPosts = async (req, res) => {
       .populate("likes", "username");
 
     res.status(200).json(posts);
-  }
-  catch (err) {
+  } catch (err) {
     console.log("Error in getUserPosts", err);
     res.status(500).json({ error: "Internal Server Error" });
   }
-
-}
+};

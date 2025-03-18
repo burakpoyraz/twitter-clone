@@ -12,11 +12,15 @@ import LoadingSpinner from "./LoadingSpinner";
 const Post = ({ post }) => {
   const [comment, setComment] = useState("");
 
+
+
   const postOwner = post.user;
 
   const queryClient = useQueryClient();
 
-  const user = queryClient.getQueryData(["authUser"]);
+  const authUser = queryClient.getQueryData(["authUser"]);
+
+  const [liked, setLiked] = useState(post.likes.some(like => like._id === authUser._id));
 
   const { mutate: deletePostMutation, isPending } = useMutation({
     mutationFn: async () => {
@@ -45,9 +49,106 @@ const Post = ({ post }) => {
     },
   });
 
-  const isLiked = false;
+  const {mutate: likePost, isPending: isLikingPost} = useMutation({
+    mutationFn: async () => {
+      try {
+        const res =await  fetch(`/api/posts/like/${post._id}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
 
-  const isMyPost = user._id === postOwner._id;
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          toast.error(data.error);
+          throw new Error(data.error);
+        }
+        return data;
+      } catch (error) {
+        throw new Error(error.message);
+      }
+    },
+   onSuccess: (data) => {
+    // Tüm postları yenilemek yerine, sadece ilgili postu güncelle
+    queryClient.setQueryData(["posts"], (oldData) => {
+      // Eğer "posts" query'si bir dizi ise
+      if (Array.isArray(oldData)) {
+        return oldData.map(oldPost => 
+          oldPost._id === post._id ? { ...oldPost, likes: data.likes } : oldPost
+        );
+      }
+      // Eğer "posts" query'si sayfalama veya farklı bir yapıya sahipse
+      // ona göre uyarlanmalı (örnek olarak):
+      return {
+        ...oldData,
+        pages: oldData.pages.map(page => ({
+          ...page,
+          posts: page.posts.map(oldPost => 
+            oldPost._id === post._id ? { ...oldPost, likes: data.likes } : oldPost
+          )
+        }))
+      };
+    });
+    
+    toast.success("Post liked successfully");
+  },
+  });
+
+  const {mutate: commentPost, isPending: isCommentingPost} = useMutation({
+    mutationFn: async () => {
+      try {
+        const res = await fetch(`/api/posts/comment/${post._id}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ text: comment }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          toast.error(data.error);
+          throw new Error(data.error);
+        }
+        return data;
+      } catch (error) {
+        throw new Error(error.message);
+      }
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["posts"], (oldData) => {
+        if (Array.isArray(oldData)) {
+          return oldData.map(oldPost =>
+            oldPost._id === post._id ? { ...oldPost, comments: data.comments } : oldPost
+          );
+        }
+        return {
+          ...oldData,
+          pages: oldData.pages.map(page => ({
+            ...page,
+            posts: page.posts.map(oldPost =>
+              oldPost._id === post._id ? { ...oldPost, comments: data.comments } : oldPost
+            )
+          }))
+        };
+      });
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    }
+  });
+
+    
+    
+
+  const isLiked = post.likes.some(like => like._id === authUser._id);
+
+
+    
+
+
+  const isMyPost = authUser._id === postOwner._id;
 
   const formattedDate = "1h";
 
@@ -59,9 +160,17 @@ const Post = ({ post }) => {
 
   const handlePostComment = (e) => {
     e.preventDefault();
+    if(isCommentingPost) return;
+    commentPost();
   };
 
-  const handleLikePost = () => {};
+  const handleLikePost = () => {
+    if(isLikingPost) return;
+    likePost();
+   
+    setLiked(!liked);
+
+  };
 
   return (
     <>
@@ -151,7 +260,7 @@ const Post = ({ post }) => {
                         <div className="flex flex-col">
                           <div className="flex items-center gap-1">
                             <span className="font-bold">
-                              {comment.user.fullName}
+                              {comment.user.fullname}
                             </span>
                             <span className="text-gray-700 text-sm">
                               @{comment.user.username}
@@ -174,7 +283,7 @@ const Post = ({ post }) => {
                     />
                     <button className="btn btn-primary rounded-full btn-sm text-white px-4">
                       {isCommenting ? (
-                        <span className="loading loading-spinner loading-md"></span>
+                        <LoadingSpinner size="md" />
                       ) : (
                         "Post"
                       )}
@@ -195,16 +304,16 @@ const Post = ({ post }) => {
                 className="flex gap-1 items-center group cursor-pointer"
                 onClick={handleLikePost}
               >
-                {!isLiked && (
+                {!liked && (
                   <FaRegHeart className="w-4 h-4 cursor-pointer text-slate-500 group-hover:text-pink-500" />
                 )}
-                {isLiked && (
+                {liked && (
                   <FaRegHeart className="w-4 h-4 cursor-pointer text-pink-500 " />
                 )}
 
                 <span
-                  className={`text-sm text-slate-500 group-hover:text-pink-500 ${
-                    isLiked ? "text-pink-500" : ""
+                  className={`text-sm  group-hover:text-pink-500 ${
+                    liked ? "text-pink-500" : "text-slate-500"
                   }`}
                 >
                   {post.likes.length}
